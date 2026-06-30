@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KTV 歌單瀏覽器</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242836;
+      --border: #2f3545;
+      --text: #e8eaef;
+      --muted: #8b93a7;
+      --accent: #ff4d8d;
+      --accent2: #6c5ce7;
+      --ok: #00d2a0;
+      --warn: #ffb020;
+      --radius: 12px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background: radial-gradient(ellipse at top, #1a1530 0%, var(--bg) 55%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1 span {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 900px) {
+      .toolbar {
+        grid-template-columns: 1.4fr repeat(4, minmax(120px, 1fr)) auto;
+        align-items: end;
+      }
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    input[type="search"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="search"]:focus,
+    select:focus {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+
+    .chip input { display: none; }
+
+    .chip:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(255, 77, 141, 0.12);
+      color: #fff;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .stats strong { color: var(--text); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .key-M { background: #1e3a5f; color: #7ec8ff; }
+    .key-F { background: #4a1942; color: #ff9de2; }
+    .key-G { background: #1f3d2f; color: #7dffb2; }
+    .key-X { background: #3d3520; color: #ffd166; }
+    .key-O { background: #2d2d3d; color: #c4b5fd; }
+    .key-0 { background: #333; color: #ccc; }
+
+    .flag-9 { color: var(--warn); }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      max-height: calc(100vh - 320px);
+      min-height: 360px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #151821;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover { color: var(--text); }
+
+    th.sorted {
+      color: var(--accent);
+    }
+
+    th .arrow { opacity: 0.5; margin-left: 4px; }
+    th.sorted .arrow { opacity: 1; }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(47, 53, 69, 0.6);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover { background: rgba(108, 92, 231, 0.08); }
+
+    .mono {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .title-cell { font-weight: 600; }
+    .artist-cell { color: #c5cbe0; }
+
+    .pager {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    .pager button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .pager button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .pager button:not(:disabled):hover {
+      border-color: var(--accent2);
+    }
+
+    .pager .page-info {
+      color: var(--muted);
+      font-size: 0.9rem;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    #loading, #error {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--muted);
+    }
+
+    #error { color: #ff6b6b; }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><span>KTV</span> 歌單瀏覽器</h1>
+      <p class="subtitle">載入 song.txt · 支援搜尋、排序與多種篩選</p>
+    </header>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>正在載入歌單…</p>
+    </div>
+
+    <div id="error" class="hidden"></div>
+
+    <div id="app" class="hidden">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <label for="search">搜尋</label>
+            <input type="search" id="search" placeholder="歌名、歌星、編號…" autocomplete="off">
+          </div>
+          <div>
+            <label for="filterKey">音鍵</label>
+            <select id="filterKey">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div>
+            <label for="filterLang">語言</label>
+            <select id="filterLang">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div>
+            <label for="filterCat">分類</label>
+            <select id="filterCat">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div>
+            <label for="filterFlag">版本</label>
+            <select id="filterFlag">
+              <option value="">全部</option>
+              <option value="0">一般 (0)</option>
+              <option value="9">舊版 (9)</option>
+            </select>
+          </div>
+          <div>
+            <label for="pageSize">每頁</label>
+            <select id="pageSize">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
+              <option value="500">500</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="chips" id="keyChips" aria-label="快速音鍵篩選"></div>
+
+        <div class="stats" style="margin-top: 14px;">
+          <span>共 <strong id="totalCount">0</strong> 首 · 顯示 <strong id="filteredCount">0</strong> 首</span>
+          <span id="parseInfo"></span>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="id">編號 <span class="arrow">↕</span></th>
+              <th data-sort="title">歌名 <span class="arrow">↕</span></th>
+              <th data-sort="artist">歌星 <span class="arrow">↕</span></th>
+              <th data-sort="key">音鍵 <span class="arrow">↕</span></th>
+              <th data-sort="lang">語言 <span class="arrow">↕</span></th>
+              <th data-sort="cat">分類 <span class="arrow">↕</span></th>
+              <th data-sort="flag">標記 <span class="arrow">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <button type="button" id="firstPage">« 首頁</button>
+        <button type="button" id="prevPage">‹ 上一頁</button>
+        <span class="page-info" id="pageInfo">第 1 / 1 頁</span>
+        <button type="button" id="nextPage">下一頁 ›</button>
+        <button type="button" id="lastPage">末頁 »</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LANG_LABELS = {
+      1: '國語', 2: '閩南語', 3: '粵語', 4: '日語', 5: '韓語',
+      6: '英語', 7: '泰語', 8: '其他', 9: '原住民語'
+    };
+
+    const KEY_LABELS = {
+      M: '男', F: '女', G: '合', X: '特', O: '其他', '0': '—'
+    };
+
+    const state = {
+      songs: [],
+      filtered: [],
+      page: 1,
+      sortKey: 'title',
+      sortDir: 1,
+      searchTimer: null
+    };
+
+    function parseLine(line) {
+      const m = line.match(/(\d+)\s+(\d+)\s+(\d+)\s*$/);
+      if (!m) return null;
+
+      const lang = +m[1];
+      const cat = +m[2];
+      const flag = +m[3];
+      const body = line.slice(0, m.index);
+      const artist = body.slice(41, 58).trim();
+      const codeTitle = body.slice(0, 41).trimEnd();
+
+      let id, key, ver, title;
+
+      const pm = codeTitle.match(/^(\d+)\s*([MFGXO])(\d)(.*)$/);
+      if (pm) {
+        [, id, key, ver, title] = pm;
+        title = title.trim();
+      } else {
+        const pm2 = codeTitle.match(/^(\d+)\s+(\d)(.*)$/);
+        if (!pm2) return null;
+        [, id, ver, title] = pm2;
+        key = '0';
+        title = title.trim();
+      }
+
+      const code = id + key + ver;
+      const searchText = [id, code, title, artist, key, lang, cat, flag].join(' ').toLowerCase();
+
+      return { id, code, key, ver, title, artist, lang, cat, flag, searchText };
+    }
+
+    function parseSongText(text) {
+      const lines = text.split(/\r?\n/);
+      const songs = [];
+      let failed = 0;
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const song = parseLine(line);
+        if (song) songs.push(song);
+        else failed++;
+      }
+
+      return { songs, failed, total: lines.length };
+    }
+
+    function fillSelect(id, values, labelFn) {
+      const el = document.getElementById(id);
+      const sorted = [...values].sort((a, b) => String(a).localeCompare(String(b), 'zh-Hant'));
+      for (const v of sorted) {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = labelFn ? labelFn(v) : v;
+        el.appendChild(opt);
+      }
+    }
+
+    function buildKeyChips(keys) {
+      const wrap = document.getElementById('keyChips');
+      wrap.innerHTML = '';
+      const order = ['M', 'F', 'G', 'X', 'O', '0'];
+      for (const k of order) {
+        if (!keys.has(k)) continue;
+        const label = document.createElement('label');
+        label.className = 'chip';
+        label.innerHTML = `<input type="checkbox" value="${k}" data-key-chip><span>${KEY_LABELS[k] || k} (${k})</span>`;
+        wrap.appendChild(label);
+      }
+    }
+
+    function getFilters() {
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const key = document.getElementById('filterKey').value;
+      const lang = document.getElementById('filterLang').value;
+      const cat = document.getElementById('filterCat').value;
+      const flag = document.getElementById('filterFlag').value;
+      const chipKeys = [...document.querySelectorAll('[data-key-chip]:checked')].map((el) => el.value);
+
+      return { q, key, lang, cat, flag, chipKeys };
+    }
+
+    function applyFilters() {
+      const { q, key, lang, cat, flag, chipKeys } = getFilters();
+
+      state.filtered = state.songs.filter((s) => {
+        if (q) {
+          const hay = s.searchText;
+          const terms = q.split(/\s+/).filter(Boolean);
+          if (!terms.every((t) => hay.includes(t))) return false;
+        }
+        if (key && s.key !== key) return false;
+        if (chipKeys.length && !chipKeys.includes(s.key)) return false;
+        if (lang && String(s.lang) !== lang) return false;
+        if (cat && String(s.cat) !== cat) return false;
+        if (flag !== '' && String(s.flag) !== flag) return false;
+        return true;
+      });
+
+      applySort();
+      state.page = 1;
+      render();
+    }
+
+    function compare(a, b, key) {
+      let va = a[key];
+      let vb = b[key];
+
+      if (key === 'id') {
+        va = +va;
+        vb = +vb;
+      } else if (key === 'lang' || key === 'cat' || key === 'flag') {
+        va = +va;
+        vb = +vb;
+      } else {
+        va = String(va).toLowerCase();
+        vb = String(vb).toLowerCase();
+      }
+
+      if (va < vb) return -1;
+      if (va > vb) return 1;
+      return 0;
+    }
+
+    function applySort() {
+      const { sortKey, sortDir } = state;
+      state.filtered.sort((a, b) => {
+        const c = compare(a, b, sortKey);
+        if (c !== 0) return c * sortDir;
+        return compare(a, b, 'id') * sortDir;
+      });
+    }
+
+    function render() {
+      const pageSize = +document.getElementById('pageSize').value;
+      const totalPages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
+      state.page = Math.min(state.page, totalPages);
+
+      const start = (state.page - 1) * pageSize;
+      const pageItems = state.filtered.slice(start, start + pageSize);
+
+      document.getElementById('totalCount').textContent = state.songs.length.toLocaleString();
+      document.getElementById('filteredCount').textContent = state.filtered.length.toLocaleString();
+      document.getElementById('pageInfo').textContent = `第 ${state.page} / ${totalPages} 頁`;
+
+      document.getElementById('firstPage').disabled = state.page <= 1;
+      document.getElementById('prevPage').disabled = state.page <= 1;
+      document.getElementById('nextPage').disabled = state.page >= totalPages;
+      document.getElementById('lastPage').disabled = state.page >= totalPages;
+
+      const tbody = document.getElementById('tbody');
+      const frag = document.createDocumentFragment();
+
+      for (const s of pageItems) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${esc(s.code)}</td>
+          <td class="title-cell">${esc(s.title) || '<span style="color:var(--muted)">—</span>'}</td>
+          <td class="artist-cell">${esc(s.artist) || '—'}</td>
+          <td><span class="badge key-${esc(s.key)}">${esc(KEY_LABELS[s.key] || s.key)}${s.ver}</span></td>
+          <td>${esc(LANG_LABELS[s.lang] || s.lang)}</td>
+          <td class="mono">${String(s.cat).padStart(2, '0')}</td>
+          <td class="${s.flag === 9 ? 'flag-9' : ''}">${s.flag}</td>
+        `;
+        frag.appendChild(tr);
+      }
+
+      tbody.replaceChildren(frag);
+
+      document.querySelectorAll('th[data-sort]').forEach((th) => {
+        th.classList.toggle('sorted', th.dataset.sort === state.sortKey);
+        const arrow = th.querySelector('.arrow');
+        if (th.dataset.sort === state.sortKey) {
+          arrow.textContent = state.sortDir > 0 ? '↑' : '↓';
+        } else {
+          arrow.textContent = '↕';
+        }
+      });
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function bindEvents() {
+      document.getElementById('search').addEventListener('input', () => {
+        clearTimeout(state.searchTimer);
+        state.searchTimer = setTimeout(applyFilters, 200);
+      });
+
+      ['filterKey', 'filterLang', 'filterCat', 'filterFlag', 'pageSize'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => {
+          if (id === 'pageSize') state.page = 1;
+          applyFilters();
+        });
+      });
+
+      document.getElementById('keyChips').addEventListener('change', applyFilters);
+
+      document.querySelectorAll('th[data-sort]').forEach((th) => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.sort;
+          if (state.sortKey === key) {
+            state.sortDir *= -1;
+          } else {
+            state.sortKey = key;
+            state.sortDir = 1;
+          }
+          applySort();
+          render();
+        });
+      });
+
+      document.getElementById('firstPage').addEventListener('click', () => { state.page = 1; render(); });
+      document.getElementById('prevPage').addEventListener('click', () => { state.page--; render(); });
+      document.getElementById('nextPage').addEventListener('click', () => { state.page++; render(); });
+      document.getElementById('lastPage').addEventListener('click', () => {
+        const pageSize = +document.getElementById('pageSize').value;
+        state.page = Math.ceil(state.filtered.length / pageSize) || 1;
+        render();
+      });
+    }
+
+    async function init() {
+      try {
+        const res = await fetch('song.txt');
+        if (!res.ok) throw new Error(`無法載入 song.txt（HTTP ${res.status}）`);
+
+        const buf = await res.arrayBuffer();
+        let text;
+        try {
+          text = new TextDecoder('big5').decode(buf);
+        } catch {
+          text = new TextDecoder('utf-8').decode(buf);
+        }
+
+        const { songs, failed, total } = parseSongText(text);
+        if (!songs.length) throw new Error('歌單解析結果為空，請確認 song.txt 格式');
+
+        state.songs = songs;
+        state.filtered = songs.slice();
+
+        const keys = new Set(songs.map((s) => s.key));
+        const langs = new Set(songs.map((s) => s.lang));
+        const cats = new Set(songs.map((s) => s.cat));
+
+        fillSelect('filterKey', keys, (k) => `${KEY_LABELS[k] || k} (${k})`);
+        fillSelect('filterLang', langs, (l) => LANG_LABELS[l] ? `${LANG_LABELS[l]} (${l})` : String(l));
+        fillSelect('filterCat', cats, (c) => String(c).padStart(2, '0'));
+        buildKeyChips(keys);
+
+        document.getElementById('parseInfo').textContent =
+          failed > 0 ? `（${failed} 行無法解析）` : '';
+
+        applySort();
+        bindEvents();
+        render();
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      } catch (err) {
+        document.getElementById('loading').classList.add('hidden');
+        const el = document.getElementById('error');
+        el.textContent = err.message || '載入失敗';
+        el.classList.remove('hidden');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
