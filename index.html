@@ -279,6 +279,27 @@
       text-align: center;
     }
 
+    .page-jump {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .page-jump input {
+      width: 72px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .page-jump button {
+      padding: 8px 12px;
+    }
+
     #loading, #error {
       text-align: center;
       padding: 48px 16px;
@@ -455,6 +476,15 @@
         min-width: 0;
         font-size: 0.85rem;
       }
+
+      .page-jump {
+        flex: 1 1 100%;
+        justify-content: center;
+      }
+
+      .page-jump input {
+        width: 96px;
+      }
     }
   </style>
 </head>
@@ -569,6 +599,10 @@
         <span class="page-info" id="pageInfo">第 1 / 1 頁</span>
         <button type="button" id="nextPage">下一頁 ›</button>
         <button type="button" id="lastPage">末頁 »</button>
+        <div class="page-jump">
+          <input type="number" id="jumpPage" min="1" step="1" inputmode="numeric" placeholder="頁碼">
+          <button type="button" id="jumpPageBtn">前往</button>
+        </div>
       </div>
     </div>
   </div>
@@ -756,6 +790,12 @@
       document.getElementById('prevPage').disabled = state.page <= 1;
       document.getElementById('nextPage').disabled = state.page >= totalPages;
       document.getElementById('lastPage').disabled = state.page >= totalPages;
+      const jumpInput = document.getElementById('jumpPage');
+      jumpInput.max = String(totalPages);
+      jumpInput.placeholder = `1-${totalPages}`;
+      if (document.activeElement !== jumpInput) {
+        jumpInput.value = String(state.page);
+      }
 
       const tbody = document.getElementById('tbody');
       const frag = document.createDocumentFragment();
@@ -807,6 +847,18 @@
       if (list) list.scrollTop = 0;
       const top = (list || document.getElementById('app')).getBoundingClientRect().top + window.scrollY - 8;
       window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+
+    function jumpToPage() {
+      const input = document.getElementById('jumpPage');
+      const pageSize = +document.getElementById('pageSize').value;
+      const totalPages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
+      const raw = Number(input.value);
+      const target = Math.max(1, Math.min(totalPages, Number.isFinite(raw) ? Math.trunc(raw) : state.page));
+      state.page = target;
+      input.value = String(target);
+      render();
+      scrollToListTop();
     }
 
     function bindEvents() {
@@ -862,6 +914,10 @@
         state.page = Math.ceil(state.filtered.length / pageSize) || 1;
         render();
         scrollToListTop();
+      });
+      document.getElementById('jumpPageBtn').addEventListener('click', jumpToPage);
+      document.getElementById('jumpPage').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') jumpToPage();
       });
     }
 
