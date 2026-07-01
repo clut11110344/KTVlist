@@ -177,6 +177,7 @@
       box-shadow: var(--shadow);
       max-height: calc(100vh - 320px);
       min-height: 360px;
+      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -288,6 +289,158 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .hidden { display: none !important; }
+
+    @media (max-width: 768px) {
+      .wrap {
+        padding: 16px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+      }
+
+      header {
+        margin-bottom: 16px;
+      }
+
+      .subtitle {
+        font-size: 0.85rem;
+      }
+
+      .panel {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .toolbar > div:first-child {
+        grid-column: 1 / -1;
+      }
+
+      input[type="search"],
+      select {
+        padding: 12px;
+        font-size: 16px;
+      }
+
+      .chip {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+      }
+
+      .stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        font-size: 0.85rem;
+      }
+
+      .table-wrap {
+        overflow: visible;
+        max-height: none;
+        min-height: 0;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      table {
+        display: block;
+        font-size: 0.9rem;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      tbody tr:hover {
+        background: var(--surface);
+      }
+
+      tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0;
+        border-bottom: none;
+        min-width: 0;
+      }
+
+      tbody td::before {
+        content: attr(data-label);
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        flex-shrink: 0;
+      }
+
+      tbody td.title-cell {
+        grid-column: 1 / -1;
+        display: block;
+        font-size: 1.05rem;
+        line-height: 1.35;
+        padding-bottom: 2px;
+        word-break: break-word;
+      }
+
+      tbody td.title-cell::before {
+        display: none;
+      }
+
+      tbody td.artist-cell {
+        grid-column: 1 / -1;
+        display: block;
+        font-size: 0.9rem;
+        color: var(--muted);
+        padding-bottom: 8px;
+        margin-bottom: 2px;
+        border-bottom: 1px solid var(--border);
+        word-break: break-word;
+      }
+
+      tbody td.artist-cell::before {
+        display: none;
+      }
+
+      .pager {
+        gap: 6px;
+        margin-top: 12px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      .pager button {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .pager .page-info {
+        flex: 1 1 100%;
+        order: -1;
+        margin-bottom: 4px;
+        min-width: 0;
+        font-size: 0.85rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -442,10 +595,11 @@
         title = title.trim();
       }
 
-      const code = id + key + ver;
-      const searchText = [id, code, title, artist, key, lang, cat, flag].join(' ').toLowerCase();
+      const keyCode = key + ver;
+      const code = id + keyCode;
+      const searchText = [id, code, keyCode, title, artist, key, lang, cat, flag].join(' ').toLowerCase();
 
-      return { id, code, key, ver, title, artist, lang, cat, flag, searchText };
+      return { id, code, key, keyCode, ver, title, artist, lang, cat, flag, searchText };
     }
 
     function parseSongText(text) {
@@ -572,13 +726,13 @@
       for (const s of pageItems) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="mono">${esc(s.code)}</td>
-          <td class="title-cell">${esc(s.title) || '<span style="color:var(--muted)">—</span>'}</td>
-          <td class="artist-cell">${esc(s.artist) || '—'}</td>
-          <td><span class="badge key-${esc(s.key)}">${esc(KEY_LABELS[s.key] || s.key)}${s.ver}</span></td>
-          <td>${esc(LANG_LABELS[s.lang] || s.lang)}</td>
-          <td class="mono">${String(s.cat).padStart(2, '0')}</td>
-          <td class="${s.flag === 9 ? 'flag-9' : ''}">${s.flag}</td>
+          <td class="mono" data-label="編號">${esc(s.id)}</td>
+          <td class="title-cell" data-label="歌名">${esc(s.title) || '<span style="color:var(--muted)">—</span>'}</td>
+          <td class="artist-cell" data-label="歌星">${esc(s.artist) || '—'}</td>
+          <td data-label="音鍵"><span class="badge key-${esc(s.key)}" title="${esc(KEY_LABELS[s.key] || s.key)}">${esc(s.keyCode)}</span></td>
+          <td data-label="語言">${esc(LANG_LABELS[s.lang] || s.lang)}</td>
+          <td class="mono" data-label="分類">${String(s.cat).padStart(2, '0')}</td>
+          <td data-label="標記" class="${s.flag === 9 ? 'flag-9' : ''}">${s.flag}</td>
         `;
         frag.appendChild(tr);
       }
@@ -676,6 +830,11 @@
 
         applySort();
         bindEvents();
+
+        if (window.matchMedia('(max-width: 768px)').matches) {
+          document.getElementById('pageSize').value = '50';
+        }
+
         render();
 
         document.getElementById('loading').classList.add('hidden');
