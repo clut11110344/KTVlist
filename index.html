@@ -151,6 +151,17 @@
 
     .stats strong { color: var(--text); }
 
+    .mobile-sort {
+      display: none;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mobile-sort > div {
+      flex: 1;
+      min-width: 0;
+    }
+
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -334,6 +345,10 @@
         font-size: 0.85rem;
       }
 
+      .mobile-sort {
+        display: flex;
+      }
+
       .table-wrap {
         overflow: visible;
         max-height: none;
@@ -506,6 +521,28 @@
         <div class="stats" style="margin-top: 14px;">
           <span>共 <strong id="totalCount">0</strong> 首 · 顯示 <strong id="filteredCount">0</strong> 首</span>
           <span id="parseInfo"></span>
+        </div>
+
+        <div class="mobile-sort">
+          <div>
+            <label for="mobileSortKey">手機排序</label>
+            <select id="mobileSortKey">
+              <option value="title">歌名</option>
+              <option value="id">編號</option>
+              <option value="artist">歌星</option>
+              <option value="key">音鍵</option>
+              <option value="lang">語言</option>
+              <option value="cat">分類</option>
+              <option value="flag">標記</option>
+            </select>
+          </div>
+          <div>
+            <label for="mobileSortDir">方向</label>
+            <select id="mobileSortDir">
+              <option value="1">由小到大</option>
+              <option value="-1">由大到小</option>
+            </select>
+          </div>
         </div>
       </section>
 
@@ -748,6 +785,13 @@
           arrow.textContent = '↕';
         }
       });
+
+      const mobileSortKey = document.getElementById('mobileSortKey');
+      const mobileSortDir = document.getElementById('mobileSortDir');
+      if (mobileSortKey && mobileSortDir) {
+        mobileSortKey.value = state.sortKey;
+        mobileSortDir.value = String(state.sortDir);
+      }
     }
 
     function esc(str) {
@@ -756,6 +800,13 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function scrollToListTop() {
+      const list = document.querySelector('.table-wrap');
+      if (list) list.scrollTop = 0;
+      const top = (list || document.getElementById('app')).getBoundingClientRect().top + window.scrollY - 8;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     }
 
     function bindEvents() {
@@ -787,13 +838,30 @@
         });
       });
 
-      document.getElementById('firstPage').addEventListener('click', () => { state.page = 1; render(); });
-      document.getElementById('prevPage').addEventListener('click', () => { state.page--; render(); });
-      document.getElementById('nextPage').addEventListener('click', () => { state.page++; render(); });
+      document.getElementById('mobileSortKey').addEventListener('change', (e) => {
+        state.sortKey = e.target.value;
+        state.page = 1;
+        applySort();
+        render();
+        scrollToListTop();
+      });
+
+      document.getElementById('mobileSortDir').addEventListener('change', (e) => {
+        state.sortDir = Number(e.target.value) || 1;
+        state.page = 1;
+        applySort();
+        render();
+        scrollToListTop();
+      });
+
+      document.getElementById('firstPage').addEventListener('click', () => { state.page = 1; render(); scrollToListTop(); });
+      document.getElementById('prevPage').addEventListener('click', () => { state.page--; render(); scrollToListTop(); });
+      document.getElementById('nextPage').addEventListener('click', () => { state.page++; render(); scrollToListTop(); });
       document.getElementById('lastPage').addEventListener('click', () => {
         const pageSize = +document.getElementById('pageSize').value;
         state.page = Math.ceil(state.filtered.length / pageSize) || 1;
         render();
+        scrollToListTop();
       });
     }
 
